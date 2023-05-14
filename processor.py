@@ -80,9 +80,21 @@ def processa_texto(texto):
     texto = substitui_espaco(texto)
     return texto
 
-def escreve_arquivo(texto, nome_arquivo):
+def escreve_arquivo(texto, nome_arquivo, cabecalho):
     with open(nome_arquivo, 'w', encoding='utf-8', newline='\n') as arquivo:
-        arquivo.write(texto)
+        arquivo.write('**** ' + cabecalho + '\n')
+        arquivo.write(texto + '\n')
+
+def get_valor_final(texto):
+    # Busca pelo texto após "Parecer Final" e pega as próximas 3 linhas
+    match = re.search(r'Parecer Final\n(.*)\n(.*)\n(.*)', texto, re.MULTILINE)
+    if match:
+        # Se o texto for encontrado, procura por um número nas 3 linhas
+        for i in range(1, 4):
+            numero = re.search(r'\d+', match.group(i))
+            if numero:
+                return numero.group()
+    return 'colocar_nota_manual' 
 
 pasta = './fichas'
 
@@ -109,15 +121,22 @@ for arquivo_pdf in arquivos_pdf:
         nome_instituicao = resultado.group(1)
         print(f'nome: {nome_instituicao}')
         print(f'sigla: {sigla_instituicao}')
+        #print('*'*25)
+        # if sigla_instituicao == 'FGV/SP':
+        #    print(texto)
+        # print(get_valor_final(texto))
         print('*'*25)
-        print(texto)
-        print('*'*25)
-    resultado = re.search(r'programa: (.*?)modalidade', texto, re.IGNORECASE | re.DOTALL)
-    if resultado:
-        programa = resultado.group(1).strip().replace('\n', ' ')
-        # print(f'programa: {programa}')
+        texto = processa_texto(texto)
+        cabecalho = "*" + processa_texto(sigla_instituicao.lower()) + ' *' + get_valor_final(texto)
+        escreve_arquivo(texto, processa_texto(nome_instituicao), cabecalho)
+
+
+    # resultado = re.search(r'programa: (.*?)modalidade', texto, re.IGNORECASE | re.DOTALL)
+    # if resultado:
+    #     programa = resultado.group(1).strip().replace('\n', ' ')
+    #     # print(f'programa: {programa}')
     
-    resultado = re.search(r'modalidade: (.*?)área de avaliação', texto, re.IGNORECASE | re.DOTALL)
-    if resultado:
-        modalidade = resultado.group(1).strip().replace('\n', ' ')
-        # print(f'modalidade: {modalidade}')
+    # resultado = re.search(r'modalidade: (.*?)área de avaliação', texto, re.IGNORECASE | re.DOTALL)
+    # if resultado:
+    #     modalidade = resultado.group(1).strip().replace('\n', ' ')
+    #     # print(f'modalidade: {modalidade}')
