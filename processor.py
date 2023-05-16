@@ -20,6 +20,7 @@
 from PyPDF2 import PdfReader
 import re
 import os
+from unidecode import unidecode
 
 
 def extrair_texto_do_pdf(arquivo_pdf):
@@ -32,16 +33,27 @@ def extrair_texto_do_pdf(arquivo_pdf):
 
 # Substitui os hífens em palavras compostas por underline (_)
 def substitui_hifen(texto):
-    resultado = re.sub(r'(\w+)-(\w+)', r'\1_\2', texto)
-    return resultado
+    return texto.replace('-', '_')
 
-# Substitui os espaços em locuções substantivas por underline (_)
 def substitui_espaco(texto):
     # Aqui, você deve listar todas as locuções substantivas que deseja tratar.
-    locucoes = ['dona de casa', 'segunda-feira', 'bem-me-quer']
+    locucoes = ['Coordenação de Aperfeiçoamento de Pessoal de Nível Superior', 
+                'UNIVERSIDADE FEDERAL', 
+                'programa de pós-graduação', 
+                'programa de pós-graduação em administração',
+                'pós graduação',
+                'Ministério da Educação',
+                'Ministério de Planejamento, Orçamento e Gestão',
+                'Secretaria da Presidência da República',
+                'Fundo Nacional de Desenvolvimento da Educação',
+                'Avaliação Quadrienal 2017',
+                'administração pública'
+                ]
     for locucao in locucoes:
-        texto = texto.replace(locucao.replace(' ', '_'), locucao)
-        texto = texto.replace(locucao.replace(' ', '_'), locucao)
+        # Converte a locução para minúsculas e substitui espaços por sublinhados
+        locucao_sublinhado = locucao.lower().replace(' ', '_')
+        # Converte o texto e a locução para minúsculas antes de fazer a substituição
+        texto = texto.lower().replace(locucao.lower(), locucao_sublinhado)
     return texto
 
 # Remove as expressões especificadas
@@ -73,15 +85,16 @@ def remove_quebras_linha(texto):
 
 # Combina todas as funções
 def processa_texto(texto):
+    texto = substitui_multiplas_expressoes(texto)
+    texto = substitui_espaco(texto)
     texto = remove_quebras_linha(texto)
+    texto = substitui_hifen(texto)
     texto = remove_caracteres(texto)
     texto = remove_expressoes(texto)
-    texto = substitui_hifen(texto)
-    texto = substitui_espaco(texto)
     return texto
 
 def escreve_arquivo(texto, nome_arquivo, cabecalho):
-    with open(nome_arquivo, 'w', encoding='utf-8', newline='\n') as arquivo:
+    with open(nome_arquivo, 'a', encoding='utf-8', newline='\n') as arquivo: 
         arquivo.write('**** ' + cabecalho + '\n')
         arquivo.write(texto + '\n')
 
@@ -95,6 +108,26 @@ def get_valor_final(texto):
             if numero:
                 return numero.group()
     return 'colocar_nota_manual' 
+
+def nome_arquivo(texto):
+    caracteres_especiais = '[^A-Za-z0-9 ]+'
+    texto = texto.replace(' ', '_')
+    texto = unidecode(texto.lower())
+    texto = re.sub(caracteres_especiais, '', texto)
+    return texto
+
+def substitui_multiplas_expressoes(texto):
+    pares_substituicao = [
+        ('PPGA'.lower(), 'programa_de_pós_graduação_em_administração'.lower()),
+        ('PPG'.lower(), 'programa_de_pós_graduação'.lower()),
+        ('FNDE'.lower(), 'Fundo_Nacional_de_Desenvolvimento_da_Educação'.lower()),
+        ('Coordenação de Aperfeiçoamento de Pessoal de Nível Superior'.lower(),'CAPES'.lower())
+    ]
+
+    for expressao_antiga, expressao_nova in pares_substituicao:
+        texto = texto.lower().replace(expressao_antiga, expressao_nova)
+    return texto
+
 
 pasta = './fichas'
 
@@ -128,7 +161,8 @@ for arquivo_pdf in arquivos_pdf:
         print('*'*25)
         texto = processa_texto(texto)
         cabecalho = "*" + processa_texto(sigla_instituicao.lower()) + ' *' + get_valor_final(texto)
-        escreve_arquivo(texto, processa_texto(nome_instituicao), cabecalho)
+        print((nome_arquivo(nome_instituicao)+'.txt'))
+        escreve_arquivo(texto=texto, nome_arquivo='iramuteq.txt', cabecalho=cabecalho)
 
 
     # resultado = re.search(r'programa: (.*?)modalidade', texto, re.IGNORECASE | re.DOTALL)
