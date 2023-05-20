@@ -21,7 +21,15 @@ from PyPDF2 import PdfReader
 import re
 import os
 from unidecode import unidecode
+from docx import Document
+from chardet.universaldetector import UniversalDetector
+import spacy
+from pdf2docx import Converter
+import os
 
+
+# Funções Auxiliares
+# -------------------------------------------------------------------------------
 
 def extrair_texto_do_pdf(arquivo_pdf):
     pdf_reader = PdfReader(arquivo_pdf)
@@ -30,22 +38,88 @@ def extrair_texto_do_pdf(arquivo_pdf):
         texto_completo += page.extract_text()
     return texto_completo
 
+def extrair_texto_do_doc(arquivo_doc):
+    doc = Document(arquivo_doc)
+    text = " ".join([paragraph.text for paragraph in doc.paragraphs])
+    return text
 
-# Substitui os hífens em palavras compostas por underline (_)
-def substitui_hifen(texto):
-    return texto.replace('-', '_')
+def detect_encoding(filename):
+    detector = UniversalDetector()
+    with open(filename, 'rb') as f:
+        for line in f:
+            detector.feed(line)
+            if detector.done:
+                break
+    detector.close()
+    return detector.result['encoding']
 
-def substitui_espaco(texto):
+def read_txt_file(filename):
+    encoding = detect_encoding(filename)
+    with open(filename, 'r', encoding=encoding) as file:
+        content = file.read()
+    return content
+
+def escreve_arquivo(texto, nome_arquivo, cabecalho):
+    with open(nome_arquivo, 'a', encoding='utf-8', newline='\n') as arquivo: 
+        arquivo.write('**** ' + cabecalho + '\n')
+        arquivo.write(texto + '\n')
+
+def nome_arquivo(texto):
+    caracteres_especiais = '[^A-Za-z0-9 ]+'
+    texto = texto.replace(' ', '_')
+    texto = unidecode(texto.lower())
+    texto = re.sub(caracteres_especiais, '', texto)
+    return texto
+
+# Processa cada arquivo PDF
+def convert_pdf_docx(arquivo, arquivo_destino):
+    cv = Converter(arquivo)
+    # Processar todas as páginas
+    cv.convert(arquivo_destino, start=0, end=None)
+
+def monta_cabecalho(nome_arquivo):
+    nome_arquivo_sem_extensao = os.path.splitext(nome_arquivo)[0]
+    items = nome_arquivo_sem_extensao.split('_')
+    cabecalho = []
+    if len(items) % 2 == 0:
+        for i in range(0, len(items), 2):
+            cabecalho.append(f'{items[i]}_{items[i+1]}')
+    else:
+        cabecalho = items
+    # Usa a função map para adicionar '*' antes de cada string na lista
+    cabecalho = map(lambda s: '*' + s, cabecalho)
+    resultado = " ".join(cabecalho)
+    return resultado.lower()
+
+
+
+# Funções de Processamento de Texto
+# -------------------------------------------------------------------------------
+
+# Remove quebras de linha e tabulação
+def remove_quebras_linha_tabulacao(texto):
+    texto = texto.replace('\t', ' ')
+    texto = texto.replace('\n', ' ')
+    return re.sub(' +', ' ', texto) # remove espaços múltiplos
+
+def substitui_multiplas_expressoes(texto):
+    pares_substituicao = [
+        ('PPGA', 'programa de pós-graduação em administração'),
+        ('PPG', 'programa de pós-graduação'),
+        ('FNDE', 'Fundo Nacional de Desenvolvimento da Educação'),
+        ('Coordenação de Aperfeiçoamento de Pessoal de Nível Superior','CAPES')
+    ]
+
+    for expressao_antiga, expressao_nova in pares_substituicao:
+        texto = texto.lower().replace(expressao_antiga.lower(), expressao_nova.lower())
+    return texto
+
+# Trata locuções substantivas para que as mesmas apareceçam juntas por underline
+def trata_locusoes_substantivas(texto):
     # Aqui, você deve listar todas as locuções substantivas que deseja tratar.
-    locucoes = ['Coordenação de Aperfeiçoamento de Pessoal de Nível Superior', 
+    locucoes = ['pós graduação',
                 'UNIVERSIDADE FEDERAL', 
-                'programa de pós-graduação', 
-                'programa de pós-graduação em administração',
-                'pós graduação',
                 'Ministério da Educação',
-                'Ministério de Planejamento, Orçamento e Gestão',
-                'Secretaria da Presidência da República',
-                'Fundo Nacional de Desenvolvimento da Educação',
                 'Avaliação Quadrienal 2017',
                 'administração pública'
                 ]
@@ -56,78 +130,53 @@ def substitui_espaco(texto):
         texto = texto.lower().replace(locucao.lower(), locucao_sublinhado)
     return texto
 
-# Remove as expressões especificadas
-def remove_expressoes(texto):
-    expressoes = ['et', 'al.', 'cols.', 'a', 'o', 'e', 'as', 'os', 
-                  'no', 'nos', 'na', 'nas', 'do', 'dos', 'de', 'que', 'em']
-    palavras = texto.split()
-    palavras_filtradas = [palavra for palavra in palavras if palavra.lower() not in expressoes]
-    texto = ' '.join(palavras_filtradas)
+# Substitui os hífens em palavras compostas por underline (_)
+def substitui_hifen(texto):
+    return texto.replace('-', '_')
+
+# Remove os caracteres especificados
+def remove_caracteres(texto):
+    caracteres = ['"', "'", '-', '$', '%', '*', '...', '`']
+    for caractere in caracteres:
+        texto = texto.replace(caractere, '')
     return texto
 
-def remove_expressoes2(texto):
+# Remove expressões
+def remove_expressoes(texto):
     expressoes = ['et al', 'cols', 'a', 'o', 'e', 'as', 'os', 
                   'no', 'nos', 'na', 'nas', 'do', 'dos', 'de', 'que', 'em']
     for expressao in expressoes:
         texto = re.sub(r'\b' + expressao + r'\b', '', texto, flags=re.IGNORECASE)
     return texto
 
-# Remove os caracteres especificados
-def remove_caracteres(texto):
-    caracteres = ['"', "'", '-', '$', '%', '*']
-    for caractere in caracteres:
-        texto = texto.replace(caractere, '')
+
+# Capitaliza nomes próprios
+def capitalizar_nomes_proprios(texto):
+    nlp = spacy.load('pt_core_news_sm')
+    doc = nlp(texto)
+    
+    for entidade in doc.ents:
+        if entidade.label_ == 'PER':
+            texto = texto.replace(entidade.text, entidade.text.title())
+
     return texto
 
-# Remove quebras de linha
-def remove_quebras_linha(texto):
-    return texto.replace('\n', ' ')
+
 
 # Combina todas as funções
 def processa_texto(texto):
+    texto = remove_quebras_linha_tabulacao(texto)
     texto = substitui_multiplas_expressoes(texto)
-    texto = substitui_espaco(texto)
-    texto = remove_quebras_linha(texto)
+    texto = trata_locusoes_substantivas(texto)
     texto = substitui_hifen(texto)
     texto = remove_caracteres(texto)
+   # texto = capitalizar_nomes_proprios(texto)
     texto = remove_expressoes(texto)
     return texto
 
-def escreve_arquivo(texto, nome_arquivo, cabecalho):
-    with open(nome_arquivo, 'a', encoding='utf-8', newline='\n') as arquivo: 
-        arquivo.write('**** ' + cabecalho + '\n')
-        arquivo.write(texto + '\n')
 
-def get_valor_final(texto):
-    # Busca pelo texto após "Parecer Final" e pega as próximas 3 linhas
-    match = re.search(r'Parecer Final\n(.*)\n(.*)\n(.*)', texto, re.MULTILINE)
-    if match:
-        # Se o texto for encontrado, procura por um número nas 3 linhas
-        for i in range(1, 4):
-            numero = re.search(r'\d+', match.group(i))
-            if numero:
-                return numero.group()
-    return 'colocar_nota_manual' 
-
-def nome_arquivo(texto):
-    caracteres_especiais = '[^A-Za-z0-9 ]+'
-    texto = texto.replace(' ', '_')
-    texto = unidecode(texto.lower())
-    texto = re.sub(caracteres_especiais, '', texto)
-    return texto
-
-def substitui_multiplas_expressoes(texto):
-    pares_substituicao = [
-        ('PPGA'.lower(), 'programa_de_pós_graduação_em_administração'.lower()),
-        ('PPG'.lower(), 'programa_de_pós_graduação'.lower()),
-        ('FNDE'.lower(), 'Fundo_Nacional_de_Desenvolvimento_da_Educação'.lower()),
-        ('Coordenação de Aperfeiçoamento de Pessoal de Nível Superior'.lower(),'CAPES'.lower())
-    ]
-
-    for expressao_antiga, expressao_nova in pares_substituicao:
-        texto = texto.lower().replace(expressao_antiga, expressao_nova)
-    return texto
-
+# Programa 
+# -------------------------------------------------------------------------------
 
 pasta = './fichas'
 
@@ -136,41 +185,34 @@ arquivos = os.listdir(pasta)
 
 # Filtra a lista de arquivos para incluir apenas os arquivos PDF
 arquivos_pdf = [arquivo for arquivo in arquivos if arquivo.endswith('.pdf')]
+arquivos_doc = [arquivo for arquivo in arquivos if arquivo.endswith('.doc') or arquivo.endswith('.docx')] 
+arquivos_txt = [arquivo for arquivo in arquivos if arquivo.endswith('.txt')]
 
+
+# Processa cada arquivo DOC
+for arquivo_doc in arquivos_doc:
+    # Cria o caminho completo para o arquivo
+    caminho_completo = os.path.join(pasta, arquivo_doc)
+    texto = extrair_texto_do_doc(caminho_completo)
+    texto = processa_texto(texto)
+    cabecalho = monta_cabecalho(arquivo_doc)
+    escreve_arquivo(texto=texto, nome_arquivo='corpus_textual.txt', cabecalho=cabecalho)
+
+# Processa cada arquivo TXT
+for arquivo_txt in arquivos_txt:
+    # Cria o caminho completo para o arquivo
+    caminho_completo = os.path.join(pasta, arquivo_txt)
+    texto = read_txt_file(caminho_completo)
+    texto = processa_texto(texto)
+    cabecalho = monta_cabecalho(arquivo_txt)
+    escreve_arquivo(texto=texto, nome_arquivo='corpus_textual.txt', cabecalho=cabecalho)
 
 # Processa cada arquivo PDF
 for arquivo_pdf in arquivos_pdf:
     # Cria o caminho completo para o arquivo
     caminho_completo = os.path.join(pasta, arquivo_pdf)
-    
     # Extrai o texto do arquivo PDF
     texto = extrair_texto_do_pdf(caminho_completo)
-
-    resultado = re.search(r'instituição de ensino: (.*?)Programa', texto, re.IGNORECASE | re.DOTALL)
-    if resultado:
-        nome_instituicao = resultado.group(1).strip().replace('\n', ' ')
-        resultado = re.search(r'(.*?) \(([^)]+)\)$', nome_instituicao)
-        sigla_instituicao = resultado.group(2)
-        nome_instituicao = resultado.group(1)
-        print(f'nome: {nome_instituicao}')
-        print(f'sigla: {sigla_instituicao}')
-        #print('*'*25)
-        # if sigla_instituicao == 'FGV/SP':
-        #    print(texto)
-        # print(get_valor_final(texto))
-        print('*'*25)
-        texto = processa_texto(texto)
-        cabecalho = "*" + processa_texto(sigla_instituicao.lower()) + ' *' + get_valor_final(texto)
-        print((nome_arquivo(nome_instituicao)+'.txt'))
-        escreve_arquivo(texto=texto, nome_arquivo='iramuteq.txt', cabecalho=cabecalho)
-
-
-    # resultado = re.search(r'programa: (.*?)modalidade', texto, re.IGNORECASE | re.DOTALL)
-    # if resultado:
-    #     programa = resultado.group(1).strip().replace('\n', ' ')
-    #     # print(f'programa: {programa}')
-    
-    # resultado = re.search(r'modalidade: (.*?)área de avaliação', texto, re.IGNORECASE | re.DOTALL)
-    # if resultado:
-    #     modalidade = resultado.group(1).strip().replace('\n', ' ')
-    #     # print(f'modalidade: {modalidade}')
+    texto = processa_texto(texto)
+    cabecalho = monta_cabecalho(arquivo_pdf)
+    escreve_arquivo(texto=texto, nome_arquivo='corpus_textual.txt', cabecalho=cabecalho)
