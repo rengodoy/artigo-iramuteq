@@ -39,9 +39,12 @@ def extrair_texto_do_pdf(arquivo_pdf):
     return texto_completo
 
 def extrair_texto_do_doc(arquivo_doc):
-    doc = Document(arquivo_doc)
-    text = " ".join([paragraph.text for paragraph in doc.paragraphs])
-    return text
+    try: 
+        doc = Document(arquivo_doc)
+        text = " ".join([paragraph.text for paragraph in doc.paragraphs])
+        return text
+    except:
+        raise Exception(f'Arquivo {arquivo_doc} com problema! ')
 
 def detect_encoding(filename):
     detector = UniversalDetector()
@@ -104,7 +107,7 @@ def remove_quebras_linha_tabulacao(texto):
 
 def substitui_multiplas_expressoes(texto):
     pares_substituicao = [
-        ('PPGA', 'programa de pós-graduação em administração'),
+        ('PPGA', 'programa de pós-graduação'),
         ('PPG', 'programa de pós-graduação'),
         ('FNDE', 'Fundo Nacional de Desenvolvimento da Educação'),
         ('Coordenação de Aperfeiçoamento de Pessoal de Nível Superior','CAPES')
@@ -117,7 +120,7 @@ def substitui_multiplas_expressoes(texto):
 # Trata locuções substantivas para que as mesmas apareceçam juntas por underline
 def trata_locusoes_substantivas(texto):
     # Aqui, você deve listar todas as locuções substantivas que deseja tratar.
-    locucoes = ['pós graduação',
+    locucoes = ['programa de pós-graduação',
                 'UNIVERSIDADE FEDERAL', 
                 'Ministério da Educação',
                 'Avaliação Quadrienal 2017',
@@ -151,8 +154,9 @@ def remove_expressoes(texto):
 
 
 # Capitaliza nomes próprios
+# TODO usar o método melhorado e usar lista de palavras (nomes)
 def capitalizar_nomes_proprios(texto):
-    nlp = spacy.load('pt_core_news_sm')
+    nlp = spacy.load('pt_core_news_lg')
     doc = nlp(texto)
     
     for entidade in doc.ents:
@@ -161,7 +165,7 @@ def capitalizar_nomes_proprios(texto):
 
     return texto
 
-
+# Trocar "o programa", "o curso" por programa de pós graduação 
 
 # Combina todas as funções
 def processa_texto(texto):
