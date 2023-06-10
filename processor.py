@@ -1,22 +1,3 @@
-# from PyPDF2 import PdfReader
-
-# def extrair_texto_por_pagina(arquivo_pdf):
-#     pdf_reader = PdfReader(arquivo_pdf)
-#     textos_por_pagina = []
-#     for page in pdf_reader.pages:
-#         textos_por_pagina.append(page.extract_text())
-#     return textos_por_pagina
-
-# textos = extrair_texto_por_pagina('meu_arquivo.pdf')
-
-# # Imprimindo o texto de cada página
-# for i, texto in enumerate(textos):
-#     print(f"Texto da página {i+1}:")
-#     print(texto)
-#     print("\n---\n")
-
-
-
 from PyPDF2 import PdfReader
 import re
 import os
@@ -80,20 +61,47 @@ def convert_pdf_docx(arquivo, arquivo_destino):
     # Processar todas as páginas
     cv.convert(arquivo_destino, start=0, end=None)
 
+# def monta_cabecalho(nome_arquivo):
+#     nome_arquivo_sem_extensao = os.path.splitext(nome_arquivo)[0]
+#     items = nome_arquivo_sem_extensao.split('_')
+#     cabecalho = []
+#     if len(items) % 2 == 0:
+#         for i in range(0, len(items), 2):
+#             cabecalho.append(f'{items[i]}_{items[i+1]}')
+#     else:
+#         cabecalho = items
+#     # Usa a função map para adicionar '*' antes de cada string na lista
+#     cabecalho = map(lambda s: '*' + s, cabecalho)
+#     resultado = " ".join(cabecalho)
+#     return resultado.lower()
+
 def monta_cabecalho(nome_arquivo):
     nome_arquivo_sem_extensao = os.path.splitext(nome_arquivo)[0]
-    items = nome_arquivo_sem_extensao.split('_')
-    cabecalho = []
-    if len(items) % 2 == 0:
-        for i in range(0, len(items), 2):
-            cabecalho.append(f'{items[i]}_{items[i+1]}')
-    else:
-        cabecalho = items
-    # Usa a função map para adicionar '*' antes de cada string na lista
-    cabecalho = map(lambda s: '*' + s, cabecalho)
-    resultado = " ".join(cabecalho)
-    return resultado.lower()
+    partes = nome_arquivo_sem_extensao.split('_')
+    resultado = []
+    indice_nm = partes.index('nm')
+    indice_programa = partes.index('programa')
+    indice_modalidade = partes.index('modalidade')
+    indice_notafinal = partes.index('notafinal')
 
+    resultado.append('nm_' + '_'.join(partes[indice_nm+1:indice_programa]).replace('_', '-'))
+    resultado.append('programa_' + '_'.join(partes[indice_programa+1:indice_modalidade]).replace('_', '-'))
+    resultado.append('modalidade_' + '_'.join(partes[indice_modalidade+1:indice_notafinal]).replace('_', '-'))
+    resultado.append('notafinal_' + '_'.join(partes[indice_notafinal+1:]))
+    resultado = " ".join(resultado)
+
+    return resultado
+
+
+    # if len(items) % 2 == 0:
+    #     for i in range(0, len(items), 2):
+    #         cabecalho.append(f'{items[i]}_{items[i+1]}')
+    # else:
+    #     cabecalho = items
+    # # Usa a função map para adicionar '*' antes de cada string na lista
+    # cabecalho = map(lambda s: '*' + s, cabecalho)
+    # resultado = " ".join(cabecalho)
+    # return resultado.lower()
 
 
 # Funções de Processamento de Texto
@@ -110,7 +118,18 @@ def substitui_multiplas_expressoes(texto):
         ('PPGA', 'programa de pós-graduação'),
         ('PPG', 'programa de pós-graduação'),
         ('FNDE', 'Fundo Nacional de Desenvolvimento da Educação'),
-        ('Coordenação de Aperfeiçoamento de Pessoal de Nível Superior','CAPES')
+        ('Coordenação de Aperfeiçoamento de Pessoal de Nível Superior','CAPES'),
+        (' o programa', ' programa de pós-graduação'),
+        (' do programa', ' programa de pós-graduação'),
+        (' no programa', ' programa de pós-graduação'),
+        ('professor ', 'docente '),
+        ('professores ', 'docentes '),
+        (' dp ', ' docente permanente '),
+        (' ndp ', ' núcleo docente permanente '),
+        (' MB ', ' muito-bom '),
+        (' B ', ' bom '),
+        ('aluno ', 'discentes '),
+        ('alunos ', 'discentes '),
     ]
 
     for expressao_antiga, expressao_nova in pares_substituicao:
@@ -121,10 +140,30 @@ def substitui_multiplas_expressoes(texto):
 def trata_locusoes_substantivas(texto):
     # Aqui, você deve listar todas as locuções substantivas que deseja tratar.
     locucoes = ['programa de pós-graduação',
+                'programas de pós-graduação',
                 'UNIVERSIDADE FEDERAL', 
                 'Ministério da Educação',
                 'Avaliação Quadrienal 2017',
-                'administração pública'
+                'administração pública',
+                'muito bom',
+                'docente permanente',
+                'linhas de pesquisa',
+                'linha de pesquisa',
+                'produção científica',
+                'Comunidade científica',
+                'Processo seletivo',
+                'Estrutura curricular',
+                'Docentes permanentes',
+                'docente permanente',
+                'Salas de aula',
+                'Exames de qualificação',
+                'Secretaria do Programa',
+                'docentes colaboradores',
+                'docentes visitantes',
+                'docentes permantes',
+                'Produção intelectual',
+                'Produção técnica',
+                'corpo docente',
                 ]
     for locucao in locucoes:
         # Converte a locução para minúsculas e substitui espaços por sublinhados
@@ -132,6 +171,7 @@ def trata_locusoes_substantivas(texto):
         # Converte o texto e a locução para minúsculas antes de fazer a substituição
         texto = texto.lower().replace(locucao.lower(), locucao_sublinhado)
     return texto
+
 
 # Substitui os hífens em palavras compostas por underline (_)
 def substitui_hifen(texto):
@@ -174,7 +214,6 @@ def processa_texto(texto):
     texto = trata_locusoes_substantivas(texto)
     texto = substitui_hifen(texto)
     texto = remove_caracteres(texto)
-   # texto = capitalizar_nomes_proprios(texto)
     texto = remove_expressoes(texto)
     return texto
 

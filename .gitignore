@@ -160,3 +160,9 @@ cython_debug/
 #.idea/
 
 *.txt
+*.pdf
+*.doc
+
+fichas/
+doc/
+words/
