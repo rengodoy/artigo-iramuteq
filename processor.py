@@ -45,7 +45,7 @@ def read_txt_file(filename):
 
 def escreve_arquivo(texto, nome_arquivo, cabecalho):
     with open(nome_arquivo, 'a', encoding='utf-8', newline='\n') as arquivo: 
-        arquivo.write('**** ' + cabecalho + '\n')
+        arquivo.write('\n' + '**** ' + cabecalho + '\n')
         arquivo.write(texto + '\n')
 
 def nome_arquivo(texto):
@@ -61,47 +61,20 @@ def convert_pdf_docx(arquivo, arquivo_destino):
     # Processar todas as páginas
     cv.convert(arquivo_destino, start=0, end=None)
 
-# def monta_cabecalho(nome_arquivo):
-#     nome_arquivo_sem_extensao = os.path.splitext(nome_arquivo)[0]
-#     items = nome_arquivo_sem_extensao.split('_')
-#     cabecalho = []
-#     if len(items) % 2 == 0:
-#         for i in range(0, len(items), 2):
-#             cabecalho.append(f'{items[i]}_{items[i+1]}')
-#     else:
-#         cabecalho = items
-#     # Usa a função map para adicionar '*' antes de cada string na lista
-#     cabecalho = map(lambda s: '*' + s, cabecalho)
-#     resultado = " ".join(cabecalho)
-#     return resultado.lower()
 
 def monta_cabecalho(nome_arquivo):
     nome_arquivo_sem_extensao = os.path.splitext(nome_arquivo)[0]
-    partes = nome_arquivo_sem_extensao.split('_')
-    resultado = []
-    indice_nm = partes.index('nm')
-    indice_programa = partes.index('programa')
-    indice_modalidade = partes.index('modalidade')
-    indice_notafinal = partes.index('notafinal')
-
-    resultado.append('nm_' + '_'.join(partes[indice_nm+1:indice_programa]).replace('_', '-'))
-    resultado.append('programa_' + '_'.join(partes[indice_programa+1:indice_modalidade]).replace('_', '-'))
-    resultado.append('modalidade_' + '_'.join(partes[indice_modalidade+1:indice_notafinal]).replace('_', '-'))
-    resultado.append('notafinal_' + '_'.join(partes[indice_notafinal+1:]))
-    resultado = " ".join(resultado)
-
-    return resultado
-
-
-    # if len(items) % 2 == 0:
-    #     for i in range(0, len(items), 2):
-    #         cabecalho.append(f'{items[i]}_{items[i+1]}')
-    # else:
-    #     cabecalho = items
-    # # Usa a função map para adicionar '*' antes de cada string na lista
-    # cabecalho = map(lambda s: '*' + s, cabecalho)
-    # resultado = " ".join(cabecalho)
-    # return resultado.lower()
+    items = nome_arquivo_sem_extensao.split('_')
+    cabecalho = []
+    if len(items) % 2 == 0:
+        for i in range(0, len(items), 2):
+            cabecalho.append(f'{items[i]}_{items[i+1]}')
+    else:
+        cabecalho = items
+    # Usa a função map para adicionar '*' antes de cada string na lista
+    cabecalho = map(lambda s: '*' + s, cabecalho)
+    resultado = " ".join(cabecalho)
+    return resultado.lower()
 
 
 # Funções de Processamento de Texto
@@ -113,10 +86,28 @@ def remove_quebras_linha_tabulacao(texto):
     texto = texto.replace('\n', ' ')
     return re.sub(' +', ' ', texto) # remove espaços múltiplos
 
+def enclise_to_proclise(text):
+    # Encontra padrões como "desaja-se", "entregou-lhe-o", "dizem-nos"
+    pattern = r'\b(\w+)(-(me|te|se|nos|vos|lhe|lhes|o|a|os|as|lo|la|los|las|no|na|nos|nas|lho|lha|lhos|lhas)+)\b'
+    
+    # Função para reordenar os grupos de match
+    def reorder(match):
+        # separa os pronomes por espaço, para casos como "entregou-lhe-o"
+        pronouns = ' '.join(reversed(match.group(2).replace('-', '').split(' ')))
+        return pronouns + ' ' + match.group(1)
+    
+    # Aplica a função de reordenação para cada match do padrão no texto
+    result = re.sub(pattern, reorder, text)
+    
+    return result
+
+
 def substitui_multiplas_expressoes(texto):
     pares_substituicao = [
         ('PPGA', 'programa de pós-graduação'),
+        ('PPGAdm', 'programa de pós-graduação'),
         ('PPG', 'programa de pós-graduação'),
+        ('PPGs', 'programas de pós-graduação'),
         ('FNDE', 'Fundo Nacional de Desenvolvimento da Educação'),
         ('Coordenação de Aperfeiçoamento de Pessoal de Nível Superior','CAPES'),
         (' o programa', ' programa de pós-graduação'),
@@ -125,11 +116,17 @@ def substitui_multiplas_expressoes(texto):
         ('professor ', 'docente '),
         ('professores ', 'docentes '),
         (' dp ', ' docente permanente '),
+        (' dps ', ' docentes permanentes '),
         (' ndp ', ' núcleo docente permanente '),
+        (' TCC ', ' trabalho de conclusão de curso '),
+        (' TCCs ', ' trabalhos de conclusão de curso '),
+        (' MAP ', ' mestrado em administração pública '),
         (' MB ', ' muito-bom '),
         (' B ', ' bom '),
         ('aluno ', 'discentes '),
         ('alunos ', 'discentes '),
+        (' pq ',  ' produtividade e pesquisa '),
+        (' pqs ',  ' produtividade e pesquisa '),
     ]
 
     for expressao_antiga, expressao_nova in pares_substituicao:
@@ -164,6 +161,8 @@ def trata_locusoes_substantivas(texto):
                 'Produção intelectual',
                 'Produção técnica',
                 'corpo docente',
+                'bolsa produtividade e pesquisa',
+                'bolsas produtividade e pesquisa',
                 ]
     for locucao in locucoes:
         # Converte a locução para minúsculas e substitui espaços por sublinhados
@@ -209,6 +208,7 @@ def capitalizar_nomes_proprios(texto):
 
 # Combina todas as funções
 def processa_texto(texto):
+    texto = enclise_to_proclise(texto)
     texto = remove_quebras_linha_tabulacao(texto)
     texto = substitui_multiplas_expressoes(texto)
     texto = trata_locusoes_substantivas(texto)
