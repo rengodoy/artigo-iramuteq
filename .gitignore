@@ -161,8 +161,8 @@ cython_debug/
 
 *.txt
 *.pdf
-*.doc
 
-fichas/
+
+
 doc/
 words/
