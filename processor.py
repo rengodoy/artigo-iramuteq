@@ -84,7 +84,8 @@ def monta_cabecalho(nome_arquivo):
 def remove_quebras_linha_tabulacao(texto):
     texto = texto.replace('\t', ' ')
     texto = texto.replace('\n', ' ')
-    return re.sub(' +', ' ', texto) # remove espaços múltiplos
+    return texto
+
 
 def enclise_to_proclise(text):
     # Encontra padrões como "desaja-se", "entregou-lhe-o", "dizem-nos"
@@ -127,6 +128,7 @@ def substitui_multiplas_expressoes(texto):
         ('alunos ', 'discentes '),
         (' pq ',  ' produtividade e pesquisa '),
         (' pqs ',  ' produtividade e pesquisa '),
+        ( 'IES' , ' instituição de ensino superior ')
     ]
 
     for expressao_antiga, expressao_nova in pares_substituicao:
@@ -138,7 +140,8 @@ def trata_locusoes_substantivas(texto):
     # Aqui, você deve listar todas as locuções substantivas que deseja tratar.
     locucoes = ['programa de pós-graduação',
                 'programas de pós-graduação',
-                'UNIVERSIDADE FEDERAL', 
+                'UNIVERSIDADE FEDERAL',
+                'instituição de ensino superior',
                 'Ministério da Educação',
                 'Avaliação Quadrienal 2017',
                 'administração pública',
@@ -192,20 +195,6 @@ def remove_expressoes(texto):
     return texto
 
 
-# Capitaliza nomes próprios
-# TODO usar o método melhorado e usar lista de palavras (nomes)
-def capitalizar_nomes_proprios(texto):
-    nlp = spacy.load('pt_core_news_lg')
-    doc = nlp(texto)
-    
-    for entidade in doc.ents:
-        if entidade.label_ == 'PER':
-            texto = texto.replace(entidade.text, entidade.text.title())
-
-    return texto
-
-# Trocar "o programa", "o curso" por programa de pós graduação 
-
 # Combina todas as funções
 def processa_texto(texto):
     texto = enclise_to_proclise(texto)
@@ -215,7 +204,7 @@ def processa_texto(texto):
     texto = substitui_hifen(texto)
     texto = remove_caracteres(texto)
     texto = remove_expressoes(texto)
-    return texto
+    return re.sub(' +', ' ', texto)
 
 
 # Programa 
