@@ -122,13 +122,18 @@ def substitui_multiplas_expressoes(texto):
         (' TCC ', ' trabalho de conclusão de curso '),
         (' TCCs ', ' trabalhos de conclusão de curso '),
         (' MAP ', ' mestrado em administração pública '),
-        (' MB ', ' muito-bom '),
+        (' MB ', ' muito bom '),
         (' B ', ' bom '),
-        ('aluno ', 'discentes '),
-        ('alunos ', 'discentes '),
+        ('aluno ', 'discente '),
+        ('alunos ', 'discente '),
         (' pq ',  ' produtividade e pesquisa '),
         (' pqs ',  ' produtividade e pesquisa '),
-        ( 'IES' , ' instituição de ensino superior ')
+        ( 'IES' , ' instituição de ensino superior '),
+        ('produção técnica e tecnológica', 'produção científica e tecnológica'),
+        ('linhas de atuação', 'linha de atuação'),
+        ('linhas de pesquisas', 'linha de pesquisa'),
+        ('linhas de pesquisa', 'linha de pesquisa'),
+        ('docentes permanentes', 'docente permanente'),
     ]
 
     for expressao_antiga, expressao_nova in pares_substituicao:
@@ -145,27 +150,20 @@ def trata_locusoes_substantivas(texto):
                 'Ministério da Educação',
                 'Avaliação Quadrienal 2017',
                 'administração pública',
-                'muito bom',
-                'docente permanente',
-                'linhas de pesquisa',
                 'linha de pesquisa',
+                'linha de atuação',
                 'produção científica',
                 'Comunidade científica',
                 'Processo seletivo',
                 'Estrutura curricular',
-                'Docentes permanentes',
-                'docente permanente',
                 'Salas de aula',
                 'Exames de qualificação',
                 'Secretaria do Programa',
-                'docentes colaboradores',
-                'docentes visitantes',
-                'docentes permantes',
                 'Produção intelectual',
                 'Produção técnica',
-                'corpo docente',
                 'bolsa produtividade e pesquisa',
                 'bolsas produtividade e pesquisa',
+                'produção científica e tecnológica',
                 ]
     for locucao in locucoes:
         # Converte a locução para minúsculas e substitui espaços por sublinhados
@@ -227,6 +225,8 @@ for arquivo_doc in arquivos_doc:
     caminho_completo = os.path.join(pasta, arquivo_doc)
     texto = extrair_texto_do_doc(caminho_completo)
     texto = processa_texto(texto)
+    if texto == '' or texto == ' ':
+        continue
     cabecalho = monta_cabecalho(arquivo_doc)
     escreve_arquivo(texto=texto, nome_arquivo='corpus_textual.txt', cabecalho=cabecalho)
 
@@ -236,6 +236,8 @@ for arquivo_txt in arquivos_txt:
     caminho_completo = os.path.join(pasta, arquivo_txt)
     texto = read_txt_file(caminho_completo)
     texto = processa_texto(texto)
+    if texto == '' or texto == ' ': 
+        continue
     cabecalho = monta_cabecalho(arquivo_txt)
     escreve_arquivo(texto=texto, nome_arquivo='corpus_textual.txt', cabecalho=cabecalho)
 
@@ -246,5 +248,7 @@ for arquivo_pdf in arquivos_pdf:
     # Extrai o texto do arquivo PDF
     texto = extrair_texto_do_pdf(caminho_completo)
     texto = processa_texto(texto)
+    if texto == '' or texto == ' ':
+        continue
     cabecalho = monta_cabecalho(arquivo_pdf)
     escreve_arquivo(texto=texto, nome_arquivo='corpus_textual.txt', cabecalho=cabecalho)
