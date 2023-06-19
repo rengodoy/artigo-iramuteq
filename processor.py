@@ -139,25 +139,10 @@ def substitui_multiplas_expressoes(texto, pares_substituicao):
     # Para cada par (termo_antigo, termo_novo)
     for termo_antigo, termo_novo in pares_substituicao:
         # Substitui no texto
-        texto = re.sub(r'\b' + termo_antigo + r'\b', termo_novo, texto)
-        texto = re.sub(' ' + termo_antigo + ' ', termo_novo, texto)
-
+        texto = re.sub(r'\b' + termo_antigo.lower() + r'\b', termo_novo.lower(), texto.lower())
 
     # Retorna o texto modificado
     return texto
-
-
-def substituir_termos(texto, pares_substituicao):
-    palavras = re.split(r'(\W+)', texto)  # divide a string em palavras, mantendo a pontuação
-    for i, palavra in enumerate(palavras):
-        # Remove pontuação da palavra para verificar se ela deve ser substituída
-        palavra_sem_pontuacao = palavra.translate(str.maketrans('', '', string.punctuation))
-        for termo_antigo, termo_novo in pares_substituicao:
-            if palavra_sem_pontuacao == termo_antigo:
-                # Substitui a palavra, mantendo a mesma capitalização
-                palavras[i] = palavra.replace(termo_antigo, termo_novo)
-    return ''.join(palavras)
-
 
 # Trata locuções substantivas para que as mesmas apareceçam juntas por underline
 def trata_locusoes_substantivas(texto):
@@ -187,7 +172,6 @@ def trata_locusoes_substantivas(texto):
     for locucao in locucoes:
         # Converte a locução para minúsculas e substitui espaços por sublinhados
         locucao_sublinhado = locucao.lower().replace(' ', '_')
-        # Converte o texto e a locução para minúsculas antes de fazer a substituição
         texto = texto.lower().replace(locucao.lower(), locucao_sublinhado)
     return texto
 
@@ -198,7 +182,7 @@ def substitui_hifen(texto):
 
 # Remove os caracteres especificados
 def remove_caracteres(texto):
-    caracteres = ['"', "'", '-', '$', '%', '*', '...', '`', "``"]
+    caracteres = ['"', "'", '-', '$', '%', '*', '...', '`', "“", "”"]
     for caractere in caracteres:
         texto = texto.replace(caractere, '')
     return texto
@@ -225,16 +209,14 @@ def remove_artigos(texto):
 
 # Combina todas as funções
 def processa_texto(texto):
+    texto = texto.lower()
     texto = enclise_to_proclise(texto)
     texto = remove_quebras_linha_tabulacao(texto)
     texto = substitui_multiplas_expressoes(texto, pares_substituicao)
-    texto = substituir_termos(texto, pares_substituicao)
     texto = trata_locusoes_substantivas(texto)
     texto = substitui_hifen(texto)
     texto = remove_caracteres(texto)
     texto = remove_expressoes(texto)
-
-    # texto = remove_artigos(texto)
     return re.sub(' +', ' ', texto)
 
 
