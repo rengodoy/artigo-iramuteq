@@ -6,7 +6,39 @@ from docx import Document
 from chardet.universaldetector import UniversalDetector
 import spacy
 from pdf2docx import Converter
-import os
+import os, string
+
+
+pares_substituicao = [
+    ('PPGA', 'programa de pós-graduação'),
+    ('PPGAdm', 'programa de pós-graduação'),
+    ('PPG', 'programa de pós-graduação'),
+    ('PPGs', 'programas de pós-graduação'),
+    ('FNDE', 'Fundo Nacional de Desenvolvimento da Educação'),
+    ('Coordenação de Aperfeiçoamento de Pessoal de Nível Superior','CAPES'),
+    ('o programa', ' programa de pós-graduação'),
+    ('do programa', ' programa de pós-graduação'),
+    ('no programa', ' programa de pós-graduação'),
+    ('professor ', 'docente'),
+    ('professores ', 'docentes'),
+    ('dp', 'docente permanente'),
+    ('dps', 'docentes permanentes'),
+    ('ndp', 'núcleo docente permanente'),
+    ('TCC', 'trabalho de conclusão de curso'),
+    ('TCCs', 'trabalhos de conclusão de curso'),
+    ('MAP', 'mestrado em administração pública'),
+    ('MB', 'muito bom'),
+    ('B', ' bom'),
+    ('aluno', 'discente'),
+    ('alunos', 'discente'),
+    ('pq', 'produtividade e pesquisa'),
+    ('pqs', 'produtividade e pesquisa '),
+    ('IES' , 'instituição de ensino superior'),
+    ('linhas de atuação', 'linha de atuação'),
+    ('linhas de pesquisas', 'linha de pesquisa'),
+    ('linhas de pesquisa', 'linha de pesquisa'),
+]
+
 
 
 # Funções Auxiliares
@@ -103,42 +135,29 @@ def enclise_to_proclise(text):
     return result
 
 
-def substitui_multiplas_expressoes(texto):
-    pares_substituicao = [
-        ('PPGA', 'programa de pós-graduação'),
-        ('PPGAdm', 'programa de pós-graduação'),
-        ('PPG', 'programa de pós-graduação'),
-        ('PPGs', 'programas de pós-graduação'),
-        ('FNDE', 'Fundo Nacional de Desenvolvimento da Educação'),
-        ('Coordenação de Aperfeiçoamento de Pessoal de Nível Superior','CAPES'),
-        (' o programa', ' programa de pós-graduação'),
-        (' do programa', ' programa de pós-graduação'),
-        (' no programa', ' programa de pós-graduação'),
-        ('professor ', 'docente '),
-        ('professores ', 'docentes '),
-        (' dp ', ' docente permanente '),
-        (' dps ', ' docentes permanentes '),
-        (' ndp ', ' núcleo docente permanente '),
-        (' TCC ', ' trabalho de conclusão de curso '),
-        (' TCCs ', ' trabalhos de conclusão de curso '),
-        (' MAP ', ' mestrado em administração pública '),
-        (' MB ', ' muito bom '),
-        (' B ', ' bom '),
-        ('aluno ', 'discente '),
-        ('alunos ', 'discente '),
-        (' pq ',  ' produtividade e pesquisa '),
-        (' pqs ',  ' produtividade e pesquisa '),
-        ( 'IES' , ' instituição de ensino superior '),
-        ('produção técnica e tecnológica', 'produção científica e tecnológica'),
-        ('linhas de atuação', 'linha de atuação'),
-        ('linhas de pesquisas', 'linha de pesquisa'),
-        ('linhas de pesquisa', 'linha de pesquisa'),
-        ('docentes permanentes', 'docente permanente'),
-    ]
+def substitui_multiplas_expressoes(texto, pares_substituicao):
+    # Para cada par (termo_antigo, termo_novo)
+    for termo_antigo, termo_novo in pares_substituicao:
+        # Substitui no texto
+        texto = re.sub(r'\b' + termo_antigo + r'\b', termo_novo, texto)
+        texto = re.sub(' ' + termo_antigo + ' ', termo_novo, texto)
 
-    for expressao_antiga, expressao_nova in pares_substituicao:
-        texto = texto.lower().replace(expressao_antiga.lower(), expressao_nova.lower())
+
+    # Retorna o texto modificado
     return texto
+
+
+def substituir_termos(texto, pares_substituicao):
+    palavras = re.split(r'(\W+)', texto)  # divide a string em palavras, mantendo a pontuação
+    for i, palavra in enumerate(palavras):
+        # Remove pontuação da palavra para verificar se ela deve ser substituída
+        palavra_sem_pontuacao = palavra.translate(str.maketrans('', '', string.punctuation))
+        for termo_antigo, termo_novo in pares_substituicao:
+            if palavra_sem_pontuacao == termo_antigo:
+                # Substitui a palavra, mantendo a mesma capitalização
+                palavras[i] = palavra.replace(termo_antigo, termo_novo)
+    return ''.join(palavras)
+
 
 # Trata locuções substantivas para que as mesmas apareceçam juntas por underline
 def trata_locusoes_substantivas(texto):
@@ -179,29 +198,43 @@ def substitui_hifen(texto):
 
 # Remove os caracteres especificados
 def remove_caracteres(texto):
-    caracteres = ['"', "'", '-', '$', '%', '*', '...', '`']
+    caracteres = ['"', "'", '-', '$', '%', '*', '...', '`', "``"]
     for caractere in caracteres:
         texto = texto.replace(caractere, '')
     return texto
 
 # Remove expressões
 def remove_expressoes(texto):
-    expressoes = ['et al', 'cols', 'a', 'o', 'e', 'as', 'os', 
-                  'no', 'nos', 'na', 'nas', 'do', 'dos', 'de', 'que', 'em']
+    expressoes = ['et al', 'cols']
     for expressao in expressoes:
         texto = re.sub(r'\b' + expressao + r'\b', '', texto, flags=re.IGNORECASE)
     return texto
+
+def remove_artigos(texto):
+    # Carregar o modelo de linguagem português
+    nlp = spacy.load('pt_core_news_lg')
+
+    # Processar o texto com o spaCy
+    doc = nlp(texto)
+
+    # Gerar o texto sem os artigos
+    texto_sem_artigos = ' '.join([token.text for token in doc if token.pos_ != 'DET'])
+
+    return texto_sem_artigos
 
 
 # Combina todas as funções
 def processa_texto(texto):
     texto = enclise_to_proclise(texto)
     texto = remove_quebras_linha_tabulacao(texto)
-    texto = substitui_multiplas_expressoes(texto)
+    texto = substitui_multiplas_expressoes(texto, pares_substituicao)
+    texto = substituir_termos(texto, pares_substituicao)
     texto = trata_locusoes_substantivas(texto)
     texto = substitui_hifen(texto)
     texto = remove_caracteres(texto)
     texto = remove_expressoes(texto)
+
+    # texto = remove_artigos(texto)
     return re.sub(' +', ' ', texto)
 
 
