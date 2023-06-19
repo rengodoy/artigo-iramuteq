@@ -19,11 +19,11 @@ pares_substituicao = [
     ('o programa', ' programa de pós-graduação'),
     ('do programa', ' programa de pós-graduação'),
     ('no programa', ' programa de pós-graduação'),
-    ('professor ', 'docente'),
-    ('professores ', 'docentes'),
-    ('dp', 'docente permanente'),
-    ('dps', 'docentes permanentes'),
-    ('ndp', 'núcleo docente permanente'),
+    ('professor', 'docente'),
+    ('professores', 'docentes'),
+    ('dp', 'docente-permanente'),
+    ('dps', 'docente-permanente'),
+    ('ndp', 'núcleo docente-permanente'),
     ('TCC', 'trabalho de conclusão de curso'),
     ('TCCs', 'trabalhos de conclusão de curso'),
     ('MAP', 'mestrado em administração pública'),
@@ -80,12 +80,12 @@ def escreve_arquivo(texto, nome_arquivo, cabecalho):
         arquivo.write('\n' + '**** ' + cabecalho + '\n')
         arquivo.write(texto + '\n')
 
-def nome_arquivo(texto):
-    caracteres_especiais = '[^A-Za-z0-9 ]+'
-    texto = texto.replace(' ', '_')
-    texto = unidecode(texto.lower())
-    texto = re.sub(caracteres_especiais, '', texto)
-    return texto
+# def nome_arquivo(texto):
+#     caracteres_especiais = '[^A-Za-z0-9 ]+'
+#     texto = texto.replace(' ', '_')
+#     texto = unidecode(texto.lower())
+#     texto = re.sub(caracteres_especiais, '', texto)
+#     return texto
 
 # Processa cada arquivo PDF
 def convert_pdf_docx(arquivo, arquivo_destino):
@@ -168,6 +168,8 @@ def trata_locusoes_substantivas(texto):
                 'bolsa produtividade e pesquisa',
                 'bolsas produtividade e pesquisa',
                 'produção científica e tecnológica',
+                'docentes permanentes',
+                'docente permanente',
                 ]
     for locucao in locucoes:
         # Converte a locução para minúsculas e substitui espaços por sublinhados
@@ -182,7 +184,7 @@ def substitui_hifen(texto):
 
 # Remove os caracteres especificados
 def remove_caracteres(texto):
-    caracteres = ['"', "'", '-', '$', '%', '*', '...', '`', "“", "”"]
+    caracteres = ['"', "'", '-', '$', '%', '*', '...', '`', "“", "”", "–"]
     for caractere in caracteres:
         texto = texto.replace(caractere, '')
     return texto
