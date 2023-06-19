@@ -23,6 +23,7 @@ pares_substituicao = [
     ('professores', 'docentes'),
     ('dp', 'docente-permanente'),
     ('dps', 'docente-permanente'),
+    ('docentes permanentes', 'docente-permanente'),
     ('ndp', 'núcleo docente-permanente'),
     ('TCC', 'trabalho de conclusão de curso'),
     ('TCCs', 'trabalhos de conclusão de curso'),
@@ -168,7 +169,6 @@ def trata_locusoes_substantivas(texto):
                 'bolsa produtividade e pesquisa',
                 'bolsas produtividade e pesquisa',
                 'produção científica e tecnológica',
-                'docentes permanentes',
                 'docente permanente',
                 ]
     for locucao in locucoes:
@@ -219,6 +219,7 @@ def processa_texto(texto):
     texto = substitui_hifen(texto)
     texto = remove_caracteres(texto)
     texto = remove_expressoes(texto)
+    texto = substitui_multiplas_expressoes(texto, [('_', '')])
     return re.sub(' +', ' ', texto)
 
 
